@@ -110,6 +110,79 @@ class ChessBoard:
     def getPiece(self, x, y):
         return self.chesboard[x][y]
 
+    def setPiece(self, x, y, piece):
+        self.chesboard[x][y] = piece
+        return self.chesboard
+
+    def getDiagonalMoves(self, x, y):
+        moves = []
+        for i in range(1, 8):
+            if x + i < 8 and y + i < 8:
+                moves.append((x + i, y + i))
+            if x + i < 8 and y - i >= 0:
+                moves.append((x + i, y - i))
+            if x - i >= 0 and y + i < 8:
+                moves.append((x - i, y + i))
+            if x - i >= 0 and y - i >= 0:
+                moves.append((x - i, y - i))
+        return moves
+
+    def getHorizontalMoves(self, x, y):
+        moves = []
+        for i in range(1, 8):
+            if x + i < 8:
+                moves.append((x + i, y))
+            if x - i >= 0:
+                moves.append((x - i, y))
+        return moves
+
+    def getVerticalMoves(self, x, y):
+        moves = []
+        for i in range(1, 8):
+            if y + i < 8:
+                moves.append((x, y + i))
+            if y - i >= 0:
+                moves.append((x, y - i))
+        return moves
+
+    def getMoves(self, x, y):
+        figure = self.getPiece(x, y)
+        if figure.type == PieceType.EMPTY:
+            return []
+        elif figure.type == PieceType.PAWN:
+            if figure.color == PieceColor.WHITE:
+                if y == 1:
+                    return [(x, y + 1), (x, y + 2)]
+                else:
+                    return [(x, y + 1)]
+            else:
+                if y == 6:
+                    return [(x, y - 1), (x, y - 2)]
+                else:
+                    return [(x, y - 1)]
+        elif figure.type == PieceType.KNIGHT:
+            return [(x + 1, y + 2), (x + 1, y - 2), (x - 1, y + 2), (x - 1, y - 2), (x + 2, y + 1), (x + 2, y - 1), (x - 2, y + 1), (x - 2, y - 1)]
+        elif figure.type == PieceType.BISHOP:
+            return self.getDiagonalMoves(x, y)
+        elif figure.type == PieceType.ROOK:
+            return self.getHorizontalMoves(x, y).extend(self.getVerticalMoves(x, y))
+        elif figure.type == PieceType.QUEEN:
+            return self.getDiagonalMoves(x, y).extend(self.getHorizontalMoves(x, y).extend(self.getVerticalMoves(x, y)))
+        elif figure.type == PieceType.KING:
+            return [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1), (x + 1, y + 1), (x - 1, y + 1), (x + 1, y - 1), (x - 1, y - 1)]
+        else:
+            return []
+    
+    def getValidMoves(self, x, y):
+        moves = self.getMoves(x, y)
+        validMoves = []
+        for move in moves:
+            if self.getPiece(move[0], move[1]).type == PieceType.EMPTY:
+                validMoves.append(move)
+            elif self.getPiece(move[0], move[1]).color != self.getPiece(x, y).color:
+                validMoves.append(move)
+        return validMoves
+
 print("Testing ChessBoard")
 board = ChessBoard()
 board.open("board.txt")
