@@ -3,13 +3,13 @@ from enum import Enum
 
 
 class PieceType(Enum):
-    EMPTY = 0
-    PAWN = 1
-    KNIGHT = 2
-    BISHOP = 3
-    ROOK = 4
-    QUEEN = 5
-    KING = 6
+    EMPTY = 0   #
+    PAWN = 1    # P
+    KNIGHT = 2  # N
+    BISHOP = 3  # B
+    ROOK = 4    # R
+    QUEEN = 5   # Q
+    KING = 6    # K
 
     def __str__(self):
         return self.name
@@ -31,7 +31,15 @@ class Piece:
     def __init__(self):
         self.type = PieceType.EMPTY
         self.color = PieceColor.WHITE
-    
+
+    def setType(self, type):
+        self.type = type
+        return self
+
+    def setColor(self, color):
+        self.color = color
+        return self
+
     def typeFromChar(self, char):
         char = char.upper()
         if char == 'P':
@@ -83,6 +91,13 @@ class ChessBoard:
             for j in range(8):
                 line.append(Piece())
             self.chesboard.append(line)
+
+    def copy(self):
+        newBoard = ChessBoard()
+        for x in range(8):
+            for y in range(8):
+                newBoard.setPiece(x, y, self.getPiece(x, y))
+        return newBoard
 
     def open(self, filename):
         self.chesboard = []
@@ -146,6 +161,7 @@ class ChessBoard:
         return moves
 
     def getMoves(self, x, y):
+        #print("Calculating moves for " + self.chesboard[x][y].color.name + " " + self.chesboard[x][y].type.name + " at " + str(x) + "," + str(y))
         figure = self.getPiece(x, y)
         if figure.type == PieceType.EMPTY:
             return []
@@ -161,7 +177,13 @@ class ChessBoard:
                 else:
                     return [(x, y - 1)]
         elif figure.type == PieceType.KNIGHT:
-            return [(x + 1, y + 2), (x + 1, y - 2), (x - 1, y + 2), (x - 1, y - 2), (x + 2, y + 1), (x + 2, y - 1), (x - 2, y + 1), (x - 2, y - 1)]
+            moves = [(x + 1, y + 2), (x + 1, y - 2), (x - 1, y + 2), (x - 1, y - 2), (x + 2, y + 1), (x + 2, y - 1), (x - 2, y + 1), (x - 2, y - 1)]
+            correctMoves = []
+            for i in range(len(moves)):
+                if moves[i][0] < 0 or moves[i][0] > 7 or moves[i][1] < 0 or moves[i][1] > 7:
+                    continue
+                correctMoves.append(moves[i])
+            return correctMoves
         elif figure.type == PieceType.BISHOP:
             return self.getDiagonalMoves(x, y)
         elif figure.type == PieceType.ROOK:
@@ -173,7 +195,17 @@ class ChessBoard:
         else:
             return []
     
-    def getValidMoves(self, x, y):
+    def checkCheck(self, x, y, color):
+        #print("Checking check for " + color.name + " at " + str(x) + "," + str(y))
+        for i in range(8):
+            for j in range(8):
+                if self.getPiece(i, j).color == color:
+                    for move in self.getMoves(i, j):
+                        if move[0] == x and move[1] == y:
+                            return True
+        return False
+
+    def getPossibleMoves(self, x, y):
         moves = self.getMoves(x, y)
         validMoves = []
         for move in moves:
@@ -183,7 +215,68 @@ class ChessBoard:
                 validMoves.append(move)
         return validMoves
 
+    def getValidMoves(self, x, y, color):
+        moves = self.getPossibleMoves(x, y)
+        figure = self.getPiece(x, y)
+        validMoves = []
+        for move in moves:
+            if figure.type == PieceType.KING:
+                if self.checkCheck(x, y, color):
+                    continue
+                else:
+                    validMoves.append(move)
+            else:
+                validMoves.append(move)
+        return validMoves
+
+    def getValidMovesForColor(self, color):
+        validMoves = []
+        for x in range(8):
+            for y in range(8):
+                if self.getPiece(x, y).type == PieceType.EMPTY:
+                    continue
+                if self.getPiece(x, y).color != color:
+                    continue
+                validMoves.append(((x, y), self.getValidMoves(x, y, color)))
+        return validMoves
+
+    def move(self, x, y, x2, y2):
+        self.setPiece(x2, y2, self.getPiece(x, y))
+        self.setPiece(x, y, Piece())
+        return self.chesboard
+
 print("Testing ChessBoard")
 board = ChessBoard()
 board.open("board.txt")
 board.print()
+
+#print("Testing getMoves")
+#print(board.getMoves(0, 0))
+
+"""
+moves = board.getMoves(2, 1)
+for move in moves:
+    board.chesboard[move[0]][move[1]] = Piece().setType(PieceType.ROOK).setColor(PieceColor.WHITE)
+
+board.print()
+"""
+
+def performOneMove(board, depth = 0):
+    if depth < 0:
+        return
+    if depth % 2 == 0:
+        color = PieceColor.WHITE
+    else:
+        color = PieceColor.BLACK
+    if depth > 2:
+        print(("Calculating depth " + str(depth)) + " for " + color.name)
+    moves = board.getValidMovesForColor(color)
+    for moveFrom, moveTo in moves:
+        for move in moveTo:
+            #print(moveFrom, move)
+            movedBoard = board.copy()
+            movedBoard.move(moveFrom[0], moveFrom[1], move[0], move[1])
+            #movedBoard.print()
+            performOneMove(movedBoard, depth - 1)
+
+performOneMove(board, depth = 6)
